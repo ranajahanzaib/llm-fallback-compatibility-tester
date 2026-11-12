@@ -35,7 +35,7 @@ fn init_creates_working_example_and_refuses_overwrite() {
             .unwrap()
             .success()
     );
-    let config = destination.join("fallbackcontract.yaml");
+    let config = destination.join("llm-fallback-compatibility-tester.yaml");
     assert!(
         Command::new(binary)
             .args(["validate", "--config"])
