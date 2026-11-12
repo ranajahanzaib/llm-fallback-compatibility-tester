@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "category",
+    "priority",
+    "requires_human_review",
+    "auto_refund",
+    "summary"
+  ],
+  "properties": {
+    "category": {
+      "type": "string",
+      "enum": ["billing", "technical", "account", "general"]
+    },
+    "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+    "requires_human_review": { "type": "boolean" },
+    "auto_refund": { "type": "boolean" },
+    "summary": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

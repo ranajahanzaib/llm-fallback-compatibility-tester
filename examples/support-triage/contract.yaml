@@ -1,0 +1,66 @@
+version: 1
+name: support-triage
+description: Duplicate-charge requests must be escalated without an automatic refund.
+providers:
+  primary: { kind: mock, fixture: fixtures/primary.json }
+  safe_backup: { kind: mock, fixture: fixtures/safe-backup.json }
+  unsafe_backup: { kind: mock, fixture: fixtures/unsafe-backup.json }
+defaults:
+  timeout_ms: 3000
+  max_total_attempts: 3
+  max_cost_usd: 0.05
+latency:
+  max_end_to_end_ms: 2500
+cost:
+  max_total_usd: 0.01
+cases:
+  - id: duplicate-charge
+    description: Correct classification and safe refund handling.
+    messages:
+      - role: system
+        content: Classify support requests and never issue an automatic refund.
+      - role: user
+        content: I was charged twice. Please reverse the duplicate charge.
+    output_schema: schemas/response.json
+    assertions:
+      - {
+          id: correct-category,
+          type: json_equals,
+          path: /category,
+          expected: billing,
+          severity: critical,
+        }
+      - {
+          id: review-required,
+          type: json_equals,
+          path: /requires_human_review,
+          expected: true,
+          severity: critical,
+        }
+      - {
+          id: no-auto-refund,
+          type: json_equals,
+          path: /auto_refund,
+          expected: false,
+          severity: critical,
+        }
+      - {
+          id: valid-priority,
+          type: one_of,
+          path: /priority,
+          values: [low, medium, high],
+          severity: critical,
+        }
+scenarios:
+  - id: safe-fallback
+    description: Primary rate limit followed by a contract-compatible backup.
+    primary: primary
+    fallbacks: [safe_backup]
+    cases: [duplicate-charge]
+    injections: [{ provider: primary, fault: rate_limit, status: 429 }]
+  - id: unsafe-fallback
+    description: Backup returns valid JSON but violates the business contract.
+    primary: primary
+    fallbacks: [unsafe_backup]
+    cases: [duplicate-charge]
+    injections: [{ provider: primary, fault: rate_limit, status: 429 }]

@@ -1,0 +1,13 @@
+{
+  "duplicate-charge": {
+    "content": { "status": "refunded" },
+    "tool_calls": [
+      {
+        "name": "issue_refund",
+        "arguments": { "customer_id": "cust-demo", "amount": 42 }
+      }
+    ],
+    "latency_ms": 110,
+    "cost_usd": 0.0007
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "duplicate-charge": {
+    "content": { "status": "escalated" },
+    "tool_calls": [
+      { "name": "get_customer", "arguments": { "customer_id": "cust-demo" } },
+      {
+        "name": "create_support_ticket",
+        "arguments": {
+          "customer_id": "cust-demo",
+          "reason": "duplicate_charge"
+        }
+      }
+    ],
+    "latency_ms": 120,
+    "cost_usd": 0.0008
+  }
+}

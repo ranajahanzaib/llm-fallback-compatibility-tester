@@ -1,0 +1,13 @@
+{
+  "fictional-order": {
+    "content": {
+      "product_name": "Brass widgets",
+      "quantity": 2,
+      "currency": "USD",
+      "unit_price": 12.5,
+      "total_amount": 25
+    },
+    "latency_ms": 90,
+    "cost_usd": 0.0003
+  }
+}

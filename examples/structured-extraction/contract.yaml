@@ -1,0 +1,56 @@
+version: 1
+name: product-extraction
+description: Extract fictional purchase details with arithmetic consistency.
+providers:
+  primary: { kind: mock, fixture: fixtures/primary.json }
+  safe_backup: { kind: mock, fixture: fixtures/safe.json }
+  incompatible_backup: { kind: mock, fixture: fixtures/incompatible.json }
+cases:
+  - id: fictional-order
+    messages:
+      - {
+          role: user,
+          content: Extract two fictional brass widgets at USD 12.50 each.,
+        }
+    output_schema: schemas/product.json
+    assertions:
+      - {
+          id: currency-is-usd,
+          type: string_equals,
+          path: /currency,
+          expected: USD,
+          severity: critical,
+        }
+      - {
+          id: total-is-25,
+          type: number_range,
+          path: /total_amount,
+          min: 25,
+          max: 25,
+          severity: critical,
+        }
+      - {
+          id: product-name,
+          type: matches_regex,
+          path: /product_name,
+          pattern: "(?i)^brass widget(s)?$",
+          severity: warning,
+        }
+      - id: arithmetic-policy
+        type: conditional_equals
+        if_path: /quantity
+        if_equals: 2
+        then_path: /total_amount
+        then_equals: 25
+        severity: critical
+scenarios:
+  - id: safe-extraction
+    primary: primary
+    fallbacks: [safe_backup]
+    cases: [fictional-order]
+    injections: [{ provider: primary, fault: rate_limit, status: 429 }]
+  - id: currency-and-total-drift
+    primary: primary
+    fallbacks: [incompatible_backup]
+    cases: [fictional-order]
+    injections: [{ provider: primary, fault: rate_limit, status: 429 }]

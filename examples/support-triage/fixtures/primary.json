@@ -1,0 +1,14 @@
+{
+  "duplicate-charge": {
+    "content": {
+      "category": "billing",
+      "priority": "high",
+      "requires_human_review": true,
+      "auto_refund": false,
+      "summary": "Duplicate charge requires review."
+    },
+    "latency_ms": 98,
+    "cost_usd": 0.0009,
+    "usage": { "input_tokens": 86, "output_tokens": 20 }
+  }
+}
