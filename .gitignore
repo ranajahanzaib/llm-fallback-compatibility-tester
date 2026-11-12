@@ -1,74 +1,24 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Rust build output
+/target/
 
-# Dependencies
-node_modules
-test/node_modules
-.pnp
-.pnp.js
+# Generated run artifacts
+/runs/
 
-# Testing
-coverage
-.nyc_output
-test/**/out*
-test/**/next-env.d.ts
-.DS_Store
-e2e-tests
-test/tmp/**
+# Local-only files
+/PLAN.md
 
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
 
-# Production
-build
-dist
-.next
-target
-.out
-
-# Editors
-**/.idea
-**/.#*
-
-# Examples
-examples/**/out
-examples/**/.env*.local
-
-pr-stats.md
-test-timings.json
-
-# Vercel
-.vercel
-.now
-
-# Cache
-*.tsbuildinfo
-
-# Misc
-.DS_Store
+# Local credentials and environment files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
 
-# Logs
+# Logs and operating system files
 *.log
-pids
-*.cpuprofile
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-
-# Firebase
-.firebase
-
-# Flutter
-.dart_tool
-.idea
-.pub-cache
-.packages
-
-# Comment following line if you'd like to commit and push google-services.json to GitHub
-*google-services.json
-
-# Python
-venv
+.DS_Store
