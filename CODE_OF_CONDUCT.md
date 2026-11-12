@@ -58,10 +58,10 @@ representative at an online or offline event.
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-[INSERT CONTACT METHOD].
-All complaints will be reviewed and investigated promptly and fairly.
+Report conduct concerns to the project maintainers through the [project's
+GitHub profile](https://github.com/ranajahanzaib). GitHub's built-in reporting
+controls can also be used for repository content or account concerns. Do not
+include private personal information in a public issue.
 
 All community leaders are obligated to respect the privacy and security of the
 reporter of any incident.

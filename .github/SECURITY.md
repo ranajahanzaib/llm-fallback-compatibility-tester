@@ -4,6 +4,6 @@
 
 Please do not report security vulnerabilities through public GitHub issues.
 
-Instead, report them via GitHub's private [Security Advisories](../../security/advisories/new) feature. Include as much detail as possible: a description of the issue, steps to reproduce, and potential impact.
+Instead, report them through GitHub's private [Security Advisories](https://github.com/ranajahanzaib/llm-fallback-compatibility-tester/security/advisories/new) feature. Include a description of the issue, reproduction steps, and potential impact. If private reporting is unavailable for this repository, use GitHub's reporting controls on the project owner's [profile](https://github.com/ranajahanzaib).
 
-You can expect an acknowledgment within 48 hours and a resolution timeline once the issue is confirmed.
+The maintainers will acknowledge reports and share a resolution timeline after reviewing the issue. Do not include secrets or personal data that are not needed to reproduce the vulnerability.

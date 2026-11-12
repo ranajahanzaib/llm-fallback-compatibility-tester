@@ -1,19 +1,19 @@
 ---
 name: Feature request
-about: Suggest an idea for this project
-title: ''
+about: Propose a capability or improvement for LLM Fallback Compatibility Tester
+title: ""
 labels: enhancement
-assignees: ''
+assignees: ""
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**Problem**
+Describe the use case or limitation this request addresses.
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**Proposed behavior**
+Describe what LLM Fallback Compatibility Tester should do.
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+**Alternatives**
+Describe any approaches you considered, if applicable.
 
 **Additional context**
-Add any other context or screenshots about the feature request here.
+Add examples or links that clarify the request.

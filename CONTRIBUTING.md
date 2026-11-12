@@ -1,46 +1,43 @@
-## Contributing
+# Contributing
 
-We welcome contributions of all kinds to improve this project! Here's how you can get involved:
+Contributions to LLM Fallback Compatibility Tester are welcome. Open an issue to discuss a substantial change, then submit a pull request with a focused description of the behavior it changes.
 
-1. **Fork the Repository**: Start by forking the repository to your GitHub account.
+## Development setup
 
-2. **Clone Your Fork**: Clone the forked repository to your local machine:
+Install stable Rust with the `rustfmt` and `clippy` components. Python 3.11 or newer is needed for the optional adapter and its tests.
 
-   ```bash
-   git clone <repo_url>
-   cd repo_dir
-   ```
+```bash
+git clone https://github.com/ranajahanzaib/llm-fallback-compatibility-tester.git
+cd llm-fallback-compatibility-tester
+cargo build --workspace
+```
 
-3. **Create a Branch**: Create a new branch for your feature or bug fix:
+Install the optional Python adapter when working on Ollama integration:
 
-   ```bash
-   git checkout -b feature-name
-   ```
+```bash
+python3 -m pip install ./python/fallbackcontract_adapters
+```
 
-4. **Make Changes**: Make your changes to the codebase. Be sure to follow existing code style and conventions.
+## Before submitting
 
-5. **Commit Changes**: Commit your changes with a clear and descriptive message:
+Run the Rust checks and deterministic mock demo:
 
-   ```bash
-   git commit -m "Add detailed description of the changes"
-   ```
+```bash
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+./scripts/demo.sh
+```
 
-6. **Push Changes**: Push your changes to your fork:
+Run the Python adapter tests with the package source on `PYTHONPATH`:
 
-   ```bash
-   git push origin feature-name
-   ```
+```bash
+python3 -m pip install ./python/fallbackcontract_adapters
+PYTHONPATH=python/fallbackcontract_adapters/src python3 -m unittest discover -s python/fallbackcontract_adapters/tests -v
+```
 
-7. **Submit a Pull Request**: Open a pull request from your branch to the main repository's branch. Include a detailed description of your changes and the problem they solve.
+Changes to contract behavior should include a contract example or regression test. Keep mock tests independent of paid services and installed models. Document behavior and limitations in the user guides when they change.
 
-8. **Review and Feedback**: Participate in the review process. Make any requested changes, and your contribution will be merged!
+## Pull requests
 
-### Guidelines
-
-- Ensure your code follows the existing style and conventions.
-- Include tests for any new functionality or bug fixes.
-- Write clear, concise commit messages and pull request descriptions.
-
-### Issues
-
-Feel free to report bugs or suggest enhancements by creating an issue. Be sure to include detailed information about the problem and, if possible, steps to reproduce it.
+Include the problem and intended behavior, relevant validation commands and results, and any compatibility or security impact. Do not include API keys, private prompts, generated run artifacts, or unrelated formatting changes.

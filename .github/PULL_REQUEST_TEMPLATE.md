@@ -1,10 +1,11 @@
-Fixes #<issue_number_goes_here>
+## Summary
 
-> It's a good idea to open an issue first for discussion.
+Describe the behavior this change adds or corrects.
 
-**Description**
-A brief summary of what this PR does and why.
+## Validation
 
-- [ ] Tests pass
-- [ ] README updated if needed
-- [ ] No breaking changes (or described below)
+List the checks you ran and their results.
+
+## Compatibility and security
+
+Describe relevant behavior changes, data handling, or security impact. Write “None” when not applicable.
