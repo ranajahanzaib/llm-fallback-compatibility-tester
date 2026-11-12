@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fallbackcontract:schema:contract:v1",
+  "title": "LLM Fallback Compatibility Tester configuration v1",
+  "type": "object",
+  "required": ["version", "name", "providers", "cases", "scenarios"],
+  "properties": {
+    "version": { "const": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "providers": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/provider" }
+    },
+    "defaults": { "$ref": "#/$defs/defaults" },
+    "latency": {
+      "type": "object",
+      "required": ["max_end_to_end_ms"],
+      "properties": {
+        "max_end_to_end_ms": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "cost": {
+      "type": "object",
+      "required": ["max_total_usd"],
+      "properties": { "max_total_usd": { "type": "number", "minimum": 0 } },
+      "additionalProperties": false
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/case" }
+    },
+    "scenarios": { "type": "array", "items": { "$ref": "#/$defs/scenario" } }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "provider": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["mock", "openai_compatible", "ollama"] },
+        "fixture": { "type": "string" },
+        "base_url": { "type": "string", "format": "uri" },
+        "model": { "type": "string", "minLength": 1 },
+        "api_key_env": { "type": "string" },
+        "timeout_ms": { "type": "integer", "minimum": 1 },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+        "top_p": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "max_output_tokens": { "type": "integer", "minimum": 1 },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": { "type": "boolean" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "timeout_ms": { "type": "integer", "minimum": 1 },
+        "overall_deadline_ms": { "type": ["integer", "null"], "minimum": 1 },
+        "max_total_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "max_retries_per_provider": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "retry_backoff_ms": { "type": "integer", "minimum": 0 },
+        "fallback_on": { "type": "array", "items": { "type": "string" } },
+        "max_cost_usd": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "case": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["role", "content"],
+            "properties": {
+              "role": { "type": "string" },
+              "content": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "output_schema": { "type": "string" },
+        "assertions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/assertion" }
+        },
+        "requires_capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "structured_json",
+              "json_schema",
+              "tool_calling",
+              "usage_reporting",
+              "token_counting",
+              "streaming"
+            ]
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "parameters"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" },
+              "parameters": { "type": "object" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "assertion": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string" },
+        "path": { "type": "string" },
+        "expected": {},
+        "values": { "type": "array" },
+        "forbidden_values": { "type": "array" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "severity": { "enum": ["critical", "warning", "info"] },
+        "tool": { "type": "string" },
+        "case_sensitive": { "type": "boolean" },
+        "min_items": { "type": "integer", "minimum": 0 },
+        "max_items": { "type": "integer", "minimum": 0 },
+        "pattern": { "type": "string" },
+        "if_path": { "type": "string" },
+        "if_equals": {},
+        "then_path": { "type": "string" },
+        "then_equals": {}
+      },
+      "additionalProperties": false
+    },
+    "scenario": {
+      "type": "object",
+      "required": ["id", "primary"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "primary": { "type": "string" },
+        "fallbacks": { "type": "array", "items": { "type": "string" } },
+        "cases": { "type": "array", "items": { "type": "string" } },
+        "repetitions": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "injections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["provider", "fault"],
+            "properties": {
+              "provider": { "type": "string" },
+              "fault": { "type": "string" },
+              "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+              "latency_ms": { "type": "integer", "minimum": 0 },
+              "retry_after_ms": { "type": "integer", "minimum": 0 },
+              "times": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
