@@ -106,3 +106,83 @@ fn compare_runs_selected_providers_directly() {
     );
     fs::remove_dir_all(output).unwrap();
 }
+
+#[test]
+fn doctor_reports_environment_readiness() {
+    let output = Command::new(env!("CARGO_BIN_EXE_llm-fallback-compatibility-tester"))
+        .arg("doctor")
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(text.contains("Mock provider: ready"));
+    assert!(text.contains("OpenAI-compatible adapter: ready"));
+    assert!(text.contains("Python:"));
+}
+
+#[test]
+fn adapters_list_displays_supported_adapters() {
+    let output = Command::new(env!("CARGO_BIN_EXE_llm-fallback-compatibility-tester"))
+        .args(["adapters", "list"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(text.contains("mock\tavailable"));
+    assert!(text.contains("openai_compatible\tavailable"));
+    assert!(text.contains("ollama\toptional"));
+}
+
+#[test]
+fn run_scenario_filter_and_report_generation() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let output = temp_dir("scenario-filter");
+    let report_out = temp_dir("scenario-report");
+    let config = root.join("examples/support-triage/contract.yaml");
+    let result = Command::new(env!("CARGO_BIN_EXE_llm-fallback-compatibility-tester"))
+        .args(["run", "--config"])
+        .arg(&config)
+        .args(["--scenario", "safe-fallback"])
+        .args(["--output"])
+        .arg(&output)
+        .output()
+        .unwrap();
+    assert_eq!(result.status.code(), Some(0));
+
+    let run_data: serde_json::Value =
+        serde_json::from_slice(&fs::read(output.join("run.json")).unwrap()).unwrap();
+    assert_eq!(run_data["scenarios"].as_array().unwrap().len(), 1);
+    assert_eq!(run_data["scenarios"][0]["verdict"], "passed");
+
+    let report_result = Command::new(env!("CARGO_BIN_EXE_llm-fallback-compatibility-tester"))
+        .args(["report", "--input"])
+        .arg(output.join("run.json"))
+        .args(["--output"])
+        .arg(&report_out)
+        .output()
+        .unwrap();
+    assert!(report_result.status.success());
+    assert!(report_out.join("report/index.html").is_file());
+
+    fs::remove_dir_all(output).unwrap();
+    fs::remove_dir_all(report_out).unwrap();
+}
+
+#[test]
+fn run_with_repetition_reports_sample_pass_rate() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let output = temp_dir("repeat");
+    let config = root.join("examples/support-triage/contract.yaml");
+    let result = Command::new(env!("CARGO_BIN_EXE_llm-fallback-compatibility-tester"))
+        .args(["run", "--config"])
+        .arg(&config)
+        .args(["--repeat", "2"])
+        .args(["--output"])
+        .arg(&output)
+        .output()
+        .unwrap();
+    assert_eq!(result.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&result.stdout);
+    assert!(stdout.contains("observed sample pass rate"));
+    fs::remove_dir_all(output).unwrap();
+}

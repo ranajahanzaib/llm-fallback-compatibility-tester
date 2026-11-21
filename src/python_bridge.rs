@@ -19,8 +19,23 @@ pub struct PythonBridge {
 }
 impl PythonBridge {
     pub fn start(timeout: Duration) -> Result<Self> {
-        let mut child = Command::new("python3")
-            .args(["-m", "fallbackcontract_adapters.protocol"])
+        let mut command = Command::new("python3");
+        command.args(["-m", "fallbackcontract_adapters.protocol"]);
+        if let Ok(current_dir) = std::env::current_dir() {
+            let local_src = current_dir.join("python/fallbackcontract_adapters/src");
+            if local_src.is_dir() {
+                let mut pythonpath = local_src.into_os_string();
+                if let Some(existing) = std::env::var_os("PYTHONPATH") {
+                    let mut combined = std::ffi::OsString::new();
+                    combined.push(&pythonpath);
+                    combined.push(":");
+                    combined.push(existing);
+                    pythonpath = combined;
+                }
+                command.env("PYTHONPATH", pythonpath);
+            }
+        }
+        let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
@@ -128,10 +143,17 @@ mod tests {
     }
     #[test]
     fn subprocess_handshake_correlation_and_shutdown() {
-        let available = std::process::Command::new("python3")
+        let mut probe = std::process::Command::new("python3");
+        probe
             .args(["-c", "import fallbackcontract_adapters.protocol"])
-            .status()
-            .is_ok_and(|status| status.success());
+            .stderr(std::process::Stdio::null());
+        if let Ok(current_dir) = std::env::current_dir() {
+            let local_src = current_dir.join("python/fallbackcontract_adapters/src");
+            if local_src.is_dir() {
+                probe.env("PYTHONPATH", &local_src);
+            }
+        }
+        let available = probe.status().is_ok_and(|status| status.success());
         if !available {
             return;
         }
