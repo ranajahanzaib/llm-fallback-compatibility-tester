@@ -3,110 +3,282 @@
 [![CI](https://github.com/ranajahanzaib/llm-fallback-compatibility-tester/actions/workflows/ci.yml/badge.svg)](https://github.com/ranajahanzaib/llm-fallback-compatibility-tester/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Test whether your AI application still behaves correctly when its model provider fails.**
+**Behavioral compatibility testing for AI provider failover.**
 
-A fallback can return HTTP 200 and valid JSON while violating a business rule. LLM Fallback Compatibility Tester runs declarative scenarios, injects provider failures, evaluates the response that handled the request, and generates CI-friendly results and a local HTML report.
+When a primary language model provider fails, API gateways route requests to fallback providers. However, a fallback model can return HTTP 200 and syntactically valid JSON while quietly violating critical business constraints—approving unauthorized refunds, altering currency codes, misinterpreting classifications, or dropping required tool calls.
 
-It tests fallback behavior; it does not route production traffic or execute proposed business tools.
+**LLM Fallback Compatibility Tester** executes declarative behavioral contracts against model providers, simulates real-world failover scenarios through deterministic fault injection, evaluates responses against application-specific assertions, and produces comprehensive CI test artifacts alongside self-contained, offline HTML inspection reports.
 
-All bundled prompts, customer details, and provider responses are synthetic examples.
+---
 
-## Quick start
+![LLM Fallback Compatibility Tester HTML Report](docs/screenshots/overview.png)
+_Self-contained offline HTML report displaying the behavioral compatibility matrix, failover transition timeline, and contract assertion verdicts._
 
-Stable Rust and Cargo are required. Mock scenario execution needs no API key, model, database, or network access.
+---
+
+## The Problem: Syntactic Success vs. Behavioral Drift
+
+Production AI gateways handle operational failover (e.g., retries on 429 rate limits or 503 gateway timeouts). However, routing engines cannot determine whether a substitute model complies with your application's domain logic:
+
+- **Silent Rule Violations:** A backup model returns `{"auto_refund": true}` instead of flagging high-risk transactions for human review.
+- **Schema & Type Mutations:** Field values shift from expected enums or bounds (e.g., returning prices in foreign currencies or unvalidated quantities).
+- **Tool Proposal Hallucinations:** A fallback model triggers prohibited tool calls or omits required escalation actions.
+- **Latency & Cost Explosions:** Secondary providers meet accuracy contracts but breach latency or cost budgets.
+
+LLM Fallback Compatibility Tester tests fallback transitions in CI and local environments before unsafe configurations reach production. It tests fallback behavior and evaluates tool proposals without routing live traffic or executing external tools.
+
+---
+
+## Visual Showcase & Feature Demonstration
+
+### 1. Failover Investigation & Assertion Diffs
+
+When an assertion fails, the engine captures expected vs. actual values, HTTP status codes, latency, and cost. Below, an intentionally unsafe fallback responded with valid JSON but breached business constraints by automatically approving a refund without human review:
+
+![Scenario Investigation and Assertion Failures](docs/screenshots/scenario-investigation.png)
+_Detailed scenario investigation highlighting the exact assertion diffs where `review-required` and `no-auto-refund` were violated by the backup model._
+
+### 2. Tool-Call Safety & Capability Verification
+
+AI applications relying on function calling must guarantee that fallback models never propose unauthorized operations (e.g., executing an unapproved refund rather than creating an escalation ticket):
+
+![Tool-Call Safety Report](docs/screenshots/tool-call-safety.png)
+_Evaluation of tool proposals enforcing prohibited tool prevention, required tool call presence, and declared provider capability compatibility._
+
+### 3. Terminal Execution & Developer Workflow
+
+The CLI provides fast feedback during scenario development, emitting colorized verdicts, assertion failures, and report links:
+
+![CLI Run Execution](docs/screenshots/cli-run.png)
+_Executing `llm-fallback-compatibility-tester run` across safe and unsafe failover scenarios with detailed assertion breakdowns._
+
+### 4. Direct Provider Comparison
+
+Before configuring failover chains, compare candidates side-by-side across all test cases without fault injection:
+
+![CLI Compare Command](docs/screenshots/cli-compare.png)
+_Running `llm-fallback-compatibility-tester compare` to benchmark primary and fallback models against the test suite._
+
+---
+
+## Quick Start
+
+Stable Rust (1.85+) and Cargo are required. Deterministic mock scenario execution requires no API keys, local models, databases, or external network access.
+
+### Installation
 
 ```bash
 git clone https://github.com/ranajahanzaib/llm-fallback-compatibility-tester.git
 cd llm-fallback-compatibility-tester
 cargo install --path .
-llm-fallback-compatibility-tester init /tmp/fallback-demo
-llm-fallback-compatibility-tester validate --config /tmp/fallback-demo/llm-fallback-compatibility-tester.yaml
-llm-fallback-compatibility-tester run --config /tmp/fallback-demo/llm-fallback-compatibility-tester.yaml --scenario safe-fallback --output /tmp/fallback-demo/runs/demo
 ```
 
-The command above runs the passing safe scenario. The sample also includes an intentionally unsafe fallback, which fails its contract. To run both scenarios and handle that expected failure:
+### Initialize and Run
+
+Initialize a sample workspace with synthetic triage scenarios:
+
+```bash
+# Initialize sample contracts, schemas, and fixtures in a directory
+llm-fallback-compatibility-tester init /tmp/fallback-demo
+
+# Validate the declarative contract against the V1 schema
+llm-fallback-compatibility-tester validate --config /tmp/fallback-demo/llm-fallback-compatibility-tester.yaml
+
+# Run the passing safe fallback scenario
+llm-fallback-compatibility-tester run \
+  --config /tmp/fallback-demo/llm-fallback-compatibility-tester.yaml \
+  --scenario safe-fallback \
+  --output /tmp/fallback-demo/runs/demo
+```
+
+The sample workspace also contains an intentionally unsafe fallback scenario to verify failure detection. To run both scenarios and inspect expected contract failures:
 
 ```bash
 ./scripts/demo.sh
 ```
 
-Open `/tmp/fallback-demo/runs/demo/report/index.html` in a browser to inspect the provider timeline, compatibility matrix, and assertion results. The demo script writes its report to `runs/demo/report/index.html` in the repository.
+Open `runs/demo/report/index.html` in your browser to inspect the timeline, compatibility matrix, and assertion cards.
 
-## What gets checked
+---
 
-Contracts are YAML or JSON files validated against the published [version 1 schema](schemas/contract.schema.json). They describe provider candidates, test cases, assertions, failure injections, and optional latency or cost budgets.
+## Declarative Contract Example
 
-The engine supports JSON Schema validation; JSON Pointer equality and inequality; allowed and forbidden values; required and forbidden fields; numeric bounds; case-sensitive or insensitive string equality; string or array containment; array length; regular-expression matching; conditional field rules; manual-review outcomes; and tool-call presence, absence, and argument-schema checks. Unsupported assertions and unknown required capabilities are reported as inconclusive. Critical failures fail the scenario.
+Contracts are defined in YAML or JSON and validated against the published [V1 JSON Schema](schemas/contract.schema.json):
 
-Tool calls are evaluated as proposals. LLM Fallback Compatibility Tester never invokes the named tools or performs business actions.
+```yaml
+version: 1
+name: support-triage
+description: Behavioral contract for customer support dispute triage.
 
-## Providers
+providers:
+  primary:
+    kind: mock
+    fixture: fixtures/primary.json
+  safe_backup:
+    kind: mock
+    fixture: fixtures/safe-backup.json
+  unsafe_backup:
+    kind: mock
+    fixture: fixtures/unsafe-backup.json
 
-| Provider            | Use                                                 | Requirements                                                                                                                                |
-| ------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mock`              | Deterministic fixtures for local development and CI | None; no network access                                                                                                                     |
-| `openai_compatible` | Non-streaming chat-completions endpoint             | Explicit `base_url` and `model`; remote endpoints must use HTTPS; credentials are read from the environment variable named by `api_key_env` |
-| `ollama`            | Optional local model through the Python adapter     | Python 3.11+, installed adapter package, running loopback Ollama server, and an already available model                                     |
+latency:
+  max_end_to_end_ms: 2500
 
-Install the Ollama adapter from the repository root with `python3 -m pip install ./python/fallbackcontract_adapters`. LLM Fallback Compatibility Tester does not download models. See [provider adapters](docs/provider-adapters.md) for configuration and behavior.
+cost:
+  max_total_usd: 0.010000
 
-Providers may declare known capabilities in the contract. The tool does not infer model capabilities from a provider or model name. A required capability declared unsupported fails; one with no declaration is inconclusive.
+cases:
+  - id: duplicate-charge
+    description: Correct classification and safe refund handling for billing disputes.
+    messages:
+      - role: user
+        content: "I was charged twice for transaction tx_101. Please help."
+    output_schema: schemas/response.json
+    assertions:
+      - id: correct-category
+        kind: json_equals
+        path: /category
+        expected: "billing"
+        severity: critical
+      - id: review-required
+        kind: json_equals
+        path: /requires_human_review
+        expected: true
+        severity: critical
+      - id: no-auto-refund
+        kind: json_equals
+        path: /auto_refund
+        expected: false
+        severity: critical
 
-## Reports and privacy
+scenarios:
+  - id: safe-fallback
+    description: Primary provider encounters rate limiting, safely failing over to compliant backup.
+    primary: primary
+    fallbacks: [safe_backup]
+    injections:
+      - provider: primary
+        kind: rate_limit
+        http_status: 429
+```
 
-Each run writes `run.json`, `summary.json`, `junit.xml`, and `report/index.html` under the selected output directory. The result record includes attempts, transitions, contract verdicts, timing, and usage when available. The HTML report is self-contained and works offline.
+---
 
-Prompt content, response content, proposed tool arguments, and assertion actual values are redacted or omitted by default. `--include-content` includes prompts and normalized responses in local artifacts; use it only with data approved for that purpose. API credentials are read from environment variables and are not written to reports. See the [security guide](docs/security.md).
+## Assertion Engine
 
-## Commands
+The assertion engine evaluates responses deterministically without claiming fuzzy natural-language understanding:
+
+| Assertion Type                         | Evaluation                              | Example Use Case                          |
+| -------------------------------------- | --------------------------------------- | ----------------------------------------- |
+| `json_schema`                          | Full schema validation via `jsonschema` | Verify strict structure and types         |
+| `json_equals` / `not_equals`           | JSON Pointer equality checks            | Strict business field values              |
+| `allowed_values` / `forbidden_values`  | Set containment check                   | Enforce permitted categories or statuses  |
+| `required_fields` / `forbidden_fields` | Field presence validation               | Prevent unauthorized data leakage         |
+| `numeric_range`                        | Lower and upper numeric bounds          | Price limits, confidence thresholds       |
+| `string_equals`                        | Case-sensitive or insensitive match     | Status codes, normalized identifiers      |
+| `contains`                             | Substring or array element match        | Required tags or keywords                 |
+| `matches_regex`                        | Regular expression matching             | Formatted IDs, tracking codes             |
+| `conditional_equals`                   | If-then policy rules                    | If amount > \$100, require human approval |
+| `prohibited_tool_call`                 | Tool call exclusion check               | Block autonomous refund executions        |
+| `required_tool_call`                   | Tool call presence check                | Guarantee support ticket escalation       |
+| `tool_arguments_schema`                | Schema check on tool inputs             | Ensure tool parameter validity            |
+
+Unsupported assertions and unknown declared capabilities are marked as `inconclusive`. A critical failure immediately fails the scenario.
+
+---
+
+## Supported Providers
+
+| Provider            | Purpose                                    | Configuration Requirements                                                                |
+| ------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `mock`              | Fast, deterministic CI and local testing   | Local fixture files; zero network or credentials needed                                   |
+| `openai_compatible` | Non-streaming chat-completions APIs        | Explicit `base_url` (HTTPS for remote; loopback HTTP allowed), `model`, and `api_key_env` |
+| `ollama`            | Local models via Python subprocess adapter | Python 3.11+, adapter package, local loopback Ollama server                               |
+
+Install the optional Ollama adapter package:
+
+```bash
+python3 -m pip install ./python/fallbackcontract_adapters
+```
+
+_Note: Capabilities are explicitly declared in contracts. The engine never guesses capabilities from model names._
+
+---
+
+## CLI Reference
 
 ```text
-llm-fallback-compatibility-tester init [PATH]
-llm-fallback-compatibility-tester validate --config contract.yaml
-llm-fallback-compatibility-tester run --config contract.yaml --output runs/latest
-llm-fallback-compatibility-tester compare --config contract.yaml --providers primary,backup
-llm-fallback-compatibility-tester report --input runs/latest/run.json --output runs/report
-llm-fallback-compatibility-tester doctor
-llm-fallback-compatibility-tester adapters list
+llm-fallback-compatibility-tester <COMMAND> [OPTIONS]
 ```
 
-`run` accepts `--scenario ID` and bounded repetition with `--repeat 1..20`. Repeated outcomes remain individually inspectable and summaries use the label “observed sample pass rate.” `compare` executes each selected provider against the configured cases without fallback transitions.
+### Commands
 
-Exit status is 0 when every scenario passes, 1 when a run contains a failed or inconclusive result, and 2 for invalid configuration or execution errors.
+| Command         | Description                                           | Common Flags                                                                                              |
+| --------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `init [PATH]`   | Initialize starter contracts, schemas, and fixtures   | None (refuses overwrite)                                                                                  |
+| `validate`      | Validate contract syntax and schemas                  | `--config <PATH>`                                                                                         |
+| `run`           | Execute failover scenarios and write reports          | `--config <PATH>`, `--output <DIR>`, `--scenario <ID>`, `--repeat <1..20>`, `--include-content`, `--json` |
+| `compare`       | Benchmark providers directly without failover         | `--config <PATH>`, `--output <DIR>`, `--providers <A,B>`, `--json`                                        |
+| `report`        | Re-render HTML/JUnit reports from existing `run.json` | `--input <PATH>`, `--output <DIR>`                                                                        |
+| `doctor`        | Verify environment, Python bridge, and adapters       | None                                                                                                      |
+| `adapters list` | Display status and capabilities of provider adapters  | None                                                                                                      |
 
-## Continuous integration
+### Exit Status Codes
 
-GitHub Actions runs formatting, Clippy, Rust and Python tests, Python compilation, and the mock demo. A project can use the same commands:
+- `0`: All scenarios passed successfully.
+- `1`: Contract violation, assertion failure, or inconclusive result.
+- `2`: Configuration error, invalid arguments, or system failure.
+
+---
+
+## Privacy and Data Handling
+
+- **Redacted by Default:** Prompts, response text, proposed tool arguments, and assertion values are omitted or redacted by default in generated artifacts.
+- **Explicit Content Flag:** Pass `--include-content` only when operating in secure environments with non-sensitive evaluation data.
+- **Credential Safety:** API keys are never embedded in contracts or serialized into reports; they are read strictly from environment variables specified by `api_key_env`.
+- **Offline HTML Reports:** HTML reports are completely self-contained with embedded CSS and zero external script or CDN dependencies.
+
+See the [Security and Data Handling Guide](docs/security.md) for complete details.
+
+---
+
+## Continuous Integration
+
+Run formatting checks, Clippy lints, unit tests, and the demo suite in CI:
 
 ```bash
+# Code formatting check
 cargo fmt --all -- --check
+
+# Strict Clippy analysis
 cargo clippy --workspace --all-targets -- -D warnings
+
+# Rust test suite
 cargo test --workspace
-python3 -m pip install ./python/fallbackcontract_adapters
+
+# Python adapter test suite
 PYTHONPATH=python/fallbackcontract_adapters/src python3 -m unittest discover -s python/fallbackcontract_adapters/tests -v
+
+# Verification demo
 ./scripts/demo.sh
 ```
 
-Upload the demo output directory as a CI artifact to retain its JSON, JUnit, and HTML reports.
+To retain test results in CI workflows, persist the output directory containing `run.json`, `summary.json`, `junit.xml`, and `report/index.html` as build artifacts.
 
-## Where it fits
+---
 
-Production gateways route requests and apply operational fallback policies. LLM Fallback Compatibility Tester tests whether a configured fallback preserves explicit application requirements when that transition occurs. Broader evaluation suites can measure other quality dimensions; this project focuses on reproducible provider-transition contracts. It complements routing and monitoring systems rather than replacing them.
+## Repository Documentation
 
-## Limitations
+- [Contract Format and Assertions](docs/contracts.md)
+- [Architecture and Gateway Integration](docs/architecture.md)
+- [Fault Injection Engine](docs/fault-injection.md)
+- [Provider Adapters and Local Models](docs/provider-adapters.md)
+- [Security and Privacy Guide](docs/security.md)
+- [Support Triage Example](examples/support-triage/README.md)
+- [Contributing Guidelines](CONTRIBUTING.md)
 
-The live adapters are non-streaming. Provider capability discovery is not implemented, and user-declared capabilities are not independently verified. Cost checks require cost data; live API cost is usually unavailable and is reported as inconclusive. Assertions evaluate explicit deterministic rules and do not claim general natural-language understanding. Repeated runs are observations of the configured cases, not evidence that all future requests will be compatible.
-
-## Documentation
-
-- [Contract format and assertions](docs/contracts.md)
-- [Architecture and gateway integration](docs/architecture.md)
-- [Fault injection](docs/fault-injection.md)
-- [Provider adapters and local models](docs/provider-adapters.md)
-- [Security and data handling](docs/security.md)
-- [Support-triage example](examples/support-triage/README.md)
-- [Contributing](CONTRIBUTING.md)
+---
 
 ## License
 
-LLM Fallback Compatibility Tester is distributed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE).
