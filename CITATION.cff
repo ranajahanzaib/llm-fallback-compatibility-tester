@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use LLM Fallback Compatibility Tester in research or teaching, please cite this software."
+title: "LLM Fallback Compatibility Tester"
+version: 0.1.0
+authors:
+  - family-names: Rana
+    given-names: Jahanzaib
+    orcid: "https://orcid.org/0009-0006-7085-0440"
+repository-code: "https://github.com/ranajahanzaib/llm-fallback-compatibility-tester"
+license: MIT
+abstract: "Behavioral compatibility testing for AI provider failover."
+keywords:
+  - llm
+  - testing
+  - reliability
+  - fallback
+  - ai
